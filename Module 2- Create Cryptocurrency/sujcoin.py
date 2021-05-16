@@ -14,16 +14,20 @@ class Blockchain:
     
     def __init__(self): 
         self.chain = []
+        self.transactions = []
         self.create_block(proof=1, previous_hash='0')
+        self.node = Set()
 
     def create_block(self, proof, previous_hash):
         block = {
                 "index": len(self.chain) + 1,
                 "timestamp": str(datetime.datetime.now()),
                 "proof": proof,
-                "previous_hash":previous_hash
+                "previous_hash":previous_hash,
+                "transactions": self.transactions
             }
         self.chain.append(block)
+        self.transactions = []
         return block
     
     def get_previous_block(self):
@@ -62,7 +66,34 @@ class Blockchain:
             block_index += 1
             
         return True
-                
+               
+    def add_transaction(self, sender, receiver, amount):
+        transaction = {'sender': sender, 'receiver':receiver, 'amount': amount}
+        self.transactions.append(transaction)
+        return self.get_previous_block()['index'] + 1
+    
+    def add_node(self, address): 
+        parsed_address = urlparse(address)
+        self.nodes.add(parsed_address)
+
+    def replace_chain(self):
+        network = self.nodes
+        longest_chain = None
+        max_length = len(self.chain)
+        for node in network:
+            response = requests.get(f'http://{node}/get_chain')
+            if response.status_code == 200:
+                response_json = response.json()
+                length = response_json['length']
+                chain = response_json['chain']
+                if length > max_length and self.is_chain_valid(chain):
+                    max_length = length
+                    longest_chain = chain
+            
+        if longest_chain:
+            self.chain = longest_chain
+            return True
+        return False
 
 # Part 2 : Mining our Blockchain
 app = Flask(__name__)
